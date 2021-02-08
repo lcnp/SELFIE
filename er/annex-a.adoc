@@ -102,7 +102,7 @@ Datasets and Sources
 * Water wells NRCan-GSC (GIN) and SIH (Système d'information hydrogéologique) Ministère de l’Environnement et de la lutte aux changements climatique du Québec.
 * Stream gauges (ECCC, Water office,  Meteorological Service of Canada and Centre d’expertise hydrique du Québec)
 * Bedrock geology NRCan-GSC (based on various compilations) 
-* TODO: add USGS datasources
+* Cross-border USGS hydrologic units 
 
 ===== Demo Description and Links
 
@@ -317,54 +317,136 @@ hy:HY_Catchment>
                 <http://www.w3.org/2002/07/owl#Thing> .
 ----
 
-=== EU Surface Water Groundwater Linked Data
+=== BRGM - INSIDE research center - Surface / Ground water linked data gazetteer 
 
-No content available at the time of publication.
+==== Use Case Description 
+
+This use case builds on the one set up for the OGC ELFIE and tries to test a system coping with two specific requirements: 
+
+[upperalpha]
+. clients that dereference a URI asking for a specific media-type, content model etc...
+. clients that dereference the same URI without knowing beforehand the available media-type, content model etc. in a kind of "probing" or "discovery" behaviour 
+
+===== User Story
+
+Clients from group A can be very diverse 
+
+* linked data centered application : in this case BLiV (BRGM Linked data Viewer) is considered. BLiV  (https://data.geoscience.fr/Bliv/) is developped to ingest 
+** natively, linked data serialization
+** if not available, ask the end-user (human being), if he wants to interact with the other representations/serialisations available
+* desktop GIS : QGIS with GML Application Schema Toolbox which expects responses that are GML application schema compliant (e.g. https://plugins.qgis.org/plugins/gml_application_schema_toolbox/)
+* search engines crawlers  : which expect HTML with JSON-LD in the `<script>` header 
+
+Clients from group B don't correspond to the vast majority of the clients considered in Linked Data oriented approaches because, most of the time, specific implementation environments are considered (e.g. linking Non Information Resources together and somehow expecting a specific serialization content-model paradigm, web interfaces, reasoning).
+ 
+However, this need should not be overlooked as in running production environments, especially when linking information about Non Information Resources together with another system, (linked) data manager and their associated system(s) need to know what's is available 'behind' a URI. At least to cross-check they are linking to the relevant resource. Just knowing the URI-14 is not always sufficient for disambiguation.
+
+The client dereferences a URI without specifying any media-type, content model, etc. and retrieves what combination of information is available.
+
+From this
+
+* Client from group B: checks that they are linking to the relevant resource.
+* Client from group A: assesses whether they can consider the data content available provided in-band or out-of-band and interact with what suits them the most (or not).
+
+Clients from group A follow a 1 step approach from URI-14 to the data content skipping the URL-14 landing content whereas clients from group B may apply the complete URI-14 -> URL-14 -> data content pattern.
+
+===== Datasets & APIs
+
+* BRGM BD LISA : French Aquifer dataset provided using international semantic and technical interoperability approaches. BRGM already provides an OGC API Feature implementation on top of BD LISA that exposes the content according to OGC:GWML2 in GML, GeoJSON, JSON-LD with a URI resolver on top.
+
+* SANDRE Aquifer reference dataset : The French Aquifer dataset is provided according to French Water Information System conceptual model (semantics), and interchange format(XML serialization) etc... Note : in both cases the source dataset (instances) is the same.
+
+==== Demo Description and Links
+
+The use case corresponds somehow to set up what could be called a linked-data-gazetteer along with the corresponding URI configuration
+
+In order to fulfill it, the following steps have been carried out
+
+* define a model that allows to know in which media-type, content model etc. a given instance is available. This mode is a level of abstraction higher than SELFIE content model (https://data.geoscience.fr/def/LinkedDataGazetteer.xsd)
+* populate it for the French Aquifer dataset
+* implement that model on an OGC API Features using Geoserver
+* fund and drive the necessary evolutions so that Geoserver OGC API - Features implementation is capable of serving JSON-LD content and ultimately deploy within BRGM infrastructure.
+
+The API endpoint is the following: https://data.geoscience.fr/api/LDGazetteerFAPI and allows to search within the French Aquifer dataset
+
+===== Demo Screenshot(s)
+
+Group B use case leads to dereferencing the same URI asking for nothing (ex: using cURL) and loading URI-14 landing content into BLIV
+
+Then traversing "in-band" to fetch the Aquifer description in BLIV (ex : JSON-LD) or move to other content model, media-types. (GWML2 in GML, SANDRE in XML) and use it in another application.
+
+[#121AS01_inBLiV,reftext='{figure-caption} {counter:figure-num}']
+.French Hydrogeologic unit 121AS01 landing data in BLiV
+image::images/121AS01_inBLiV.png[width=600,align="center"]
+
+Group A use case leads to dereferencing the same URI asking for
+
+* `application/ld+json`: that Aquifer in BLiV in JSON-LD (see ELFIE demos on https://opengeospatial.github.io/ELFIE/)
+* `application/gml+xml`: that Aquifer in QGIS with GML Application Schema Toolbox (see demos under https://github.com/BRGM/gml_application_schema_toolbox/tree/master/presentations)
+* `text/html` (or variations around this): resolver logs clearly show that Google Bots (or Bing or other crawlers) ask for text/html (or variations around this) ask for and receive the corresponding content. The plan is then to refine the embeded JSON-LD content in the `<script>` header of this representation.
+
+==== Demo findings and potential next steps
+The implementation of the linked-data-gazetteer serving SELFIE content model compliant payload clearly demonstrates 
+
+* that SELFIE proposed content model fills a gap in linked data systems enabling description of various representations available for a given URI-14
+* the importance of the in-band / out-of-band distinction to better understand what client actually expects. The introduction of that terminology within SELFIE members discussions clearly helped move forward towards a common understanding
+* the evolution of how content negotiation is being considered (ex: adding notion of profiles), will change how linked data systems are designed and implemented (on both client & server side). When this evolution becomes mainstream in the implementations, it will become more natural for (linked) data managers to link resource together using a URI-14.
+
+Several potential next steps have been identified
+
+* Hypermedia-driven resource resolution versus content negotiation-driven resource resolution needs to be further discussed as both approaches have their pros & cons. An issue is created to compare SELFIE content model with W3C DXWG ConnegP. A quick cross-check seems to identify the following elements (but more in depth work is required)
+** connegP 'type' seems to map to SELFIE choice of 'format'
+** connegP 'profile' seems to map to SELFIE choice of 'conformsTo'
+** but there is no notion of "primaryTopic" and no "provider" in connegP
+* the 'dc:partOf' in SELFIE content model could also be a specific view/profile (a data content) and not embedded in the URL-14 landing content. It seems to us that we are mixing two different use cases : "URI-14 to data content probing and discovery" VS "exploring a domain graph of linked feature". We may consider serving this domain graph in a data content later on.
+* what response should be provided to a client trying to dereference a URI-14 and asking for specific media-type, content model etc. that cannot be provided? It would make sense to respond back with what is actually known to be available using SELFIE content model but have not been implemented in our system.
+* in its current version (1.2.0), QGIS GML Application Schema Toolbox plugin "identifies" itself when dereferencing a URI (default behaviour is to have the HTTP Use-Agent named "QGIS GML Application Schema Toolbox"). This allows to know at the resolver level that the expected media-type to be used is `application/gml+xml`. This mechanism, should be revised and it is already planned to have this QGIS plugin evolve to a better implementation of content negotiation, explicitly stating what the client wants to retrieve
 
 === CeRDI VVG - SELFIE Demonstration
 
 ==== Use Case Description
 
 To provide a means whereby all the relevant information (resources) about a real world feature (in this case a borehole or well) 
-can be brought together via a machine readable (and indexable) 'page/not a page'  
+can be brought together via machine readable (and indexable) web available information.
 
 https://geo.org.au/info/well/46217[**CeRDI SELFIE testbed**]
 
 ===== User Story
 
-Groundwater bore data management in Victoria is split across a number of Government departments, research agencies and community groups. 
+Groundwater borehole data management in Victoria is split across a number of Government departments, research agencies and community groups. 
 Information about the same real-world entity borehole may exist in multiple databases.  The VVG web portal partly 
 addressed this problem by federating these disparate data services into a spatial web portal 
 that allows the user to access ALL the information regardless of the source or duplication. https://www.vvg.org.au/cb_pages/history_of_bore_data.php[**History of Bore data in Victoria**]  
 
 Information about a borehole exists at one or more of:
+
 * Geological Survey of Victoria (GSV)
 * Department of Environment, Land, Water and Planning (DELWP)
 * State Library of Victoria (SLV)
 * Federation Univesity Australia (FedUni)
 
 These are services deliver one or more of:
+
 * HTML
 * GML
 * JSON
 * Documents / multimedia
 
 The data from these services may be about:
+
 * Geology / Aquifers
 * Groundwater (water quality, levels)
 * Borehole construction
 * Reports
 * Observations made on things intersected in the bore
 
-Currently the user must individually discover and access these different data services 
+Currently a person or automated client must individually discover and access these different data services 
 and compile the relevant information about a Borehole manually. Where the same borehole 
-exists aross multiple data sources its is not readily apparent that they are the same real world feature (there is no common identifier across these services). Additionally 
+exists across multiple data sources it is not readily apparent that they are the same real world feature (there is no common identifier across these services). Additionally, 
 there is no mechanism to identify the different types of information available.
 
-Through this demonstration a user should be able to use a standard search engine to discover the availability of these various sources, formats and contents via a MetaResource (MR).
-The user (including machines) can navigate via the links in the MR to request data from the various providers in one of the available formats.
-
-
+Through this demonstration, a user should be able to use a standard search engine to discover the availability of these various sources, formats and contents via URL-14 landing content.
+The user (including machines) can navigate via the links in the landing content to request data from the various providers in one of the available formats.
 
 ===== Datasets
 
@@ -376,42 +458,13 @@ The user (including machines) can navigate via the links in the MR to request da
 
 ==== Demo Description and Links
 
-What have we done so far: The demo is currently designed to expose a single borehole via its real-world identifier. 
-. The application resolves a URI pattern for the real-world-feature of the form https://geo.org.au/id/well/46217 which performs a 303 redirect to a SELFIE Meta Resource (MR)
-https://geo.org.au/info/46217
+What have we done: The demo is currently designed to expose a single borehole via its real-world identifier. 
+. The application resolves a URI-14 URI pattern for the real-world-feature of the form https://geo.org.au/id/well/46217 which performs a 303 redirect to URL-14 landing content at: https://geo.org.au/info/46217
 . The application then uses a lookup tool (rosetta stone) to determine which of the various data providers 
-have a corresponding borehole and the source-specific ID needed to access that data resource (DR). 
+have a corresponding borehole and the source-specific ID needed to access URL-200 data resource for that borehole. 
 . Basic Content Negotiation via accepts header caters for both HTML (with embedded JSON-LD) and straight JSON-LD.
-The format can be overrided with either a .json or ?f=json in the URI   
-For the JSON-LD the MR encodes the various representations (DRs) into the SubjectOf block. 
-
-JSON LD Example
-https://geo.org.au/info/well/46217?f=json[**https://geo.org.au/info/well/46217?f=json**]  
-
-We have included Images and Reports where they are available
-
-Photos/Reports: https://geo.org.au/info/well/WA1[**https://geo.org.au/info/well/WA1**]  
-
-State library Archives https://geo.org.au/info/well/326217[**https://geo.org.au/info/well/326217**]
-
-For the data resources (DRs) in most cases we were starting with existing WFS services delivering complex features as GML. 
-We have made use of Alistair Ritchie's WFS mediator to allow on-the-fly conversion of the GML into JSON-LD and HTML (as implemented in ELFIE-1)
-We have not been able to validate these yet apart from checking that they generate something that looks like JSON-LD. 
-
-These DRs follow a URI scheme `/sourceprovider/data/datatype/featuretype/id`
-
-WMIS Service
-https://id.cerdi.edu.au/wmis/data/gwml2/well/46217?f=json[**https://id.cerdi.edu.au/wmis/data/gwml2/well/46217?f=json**]  
-
-GSV service
-https://id.cerdi.edu.au/gsv/data/gsml2/borehole/46217?f=json[**https://id.cerdi.edu.au/gsv/data/gsml2/borehole/46217?f=json**]  
-
-We have attempted to generate an sosa:ObservationCollection to provide access to lab data (water quality) via bore ID
-https://id.cerdi.edu.au/wmis/data/sosa/observationcollection/46217?f=json[**https://id.cerdi.edu.au/wmis/data/sosa/observationcollection/46217?f=json**]  
- 
-What we have not done (yet): There are some fairly major parts of the SELFIE puzzle missing at the moment. 
-* At the moment we have not exposed the catalogue of bores (or a way for a search engine to index all bores)  
-* We are only in the preliminary stages of generating RDF or TTL formats. Or determining if we need to provide these formats. 
+The format can be overriden with either a .json or ?f=json in the URI   
+For the JSON-LD the landing-content encodes links to various representations as URL-200s in a SubjectOf block of associations. 
 
 ===== Demo Screenshot(s)
 
@@ -421,15 +474,50 @@ image::images/SELFIE_MR_Well_html.png[width=600,align="center"]
 
 ===== Links to Demo Resources
 
-Add links to source files, code used, example JSON-LD files, etc. Add descriptive text so 
-people can walk through the demo themselves without much prior knowledge. Describe how 
-the links in the data can be traversed, especially how the links are/were traversed by the demo
-application.
+[#table_feduni,reftext='{table-caption} {counter:table-num}']
+.FedUni Meta Resource landing-content Examples
+[cols="50e,50e",width="90%",options="header",align="center"]
+|===
+|Demo | Link
+|JSON LD Example |https://geo.org.au/info/well/46217?f=json[**https://geo.org.au/info/well/46217?f=json**]
+|Photos/Reports |https://geo.org.au/info/well/WA1[**https://geo.org.au/info/well/WA1**]
+|State library Archives |https://geo.org.au/info/well/326217[**https://geo.org.au/info/well/326217**]
+|===
+
+For the URL-200 data resources, in most cases, we were starting with existing WFS services delivering complex features as GML. 
+We have made use of Alistair Ritchie's WFS mediator to allow on-the-fly conversion of the GML into JSON-LD and HTML (as implemented in ELFIE)
+We have not been able to validate these yet apart from checking that they generate something that looks like JSON-LD. 
+
+These data resources follow a URI scheme `/sourceprovider/data/datatype/featuretype/id`
+
+[#table_feduni2,reftext='{table-caption} {counter:table-num}']
+.FedUni Data Resource Examples
+[cols="50e,50e",width="90%",options="header",align="center"]
+|===
+|Demo | Link
+|WMIS Service |https://id.cerdi.edu.au/wmis/data/gwml2/well/46217?f=json[**https://id.cerdi.edu.au/wmis/data/gwml2/well/46217?f=json**]  
+|GSV service |https://id.cerdi.edu.au/gsv/data/gsml2/borehole/46217?f=json[**https://id.cerdi.edu.au/gsv/data/gsml2/borehole/46217?f=json**] 
+|Lab data (water quality) ObservationCollection via bore ID|https://id.cerdi.edu.au/wmis/data/sosa/observationcollection/46217?f=json[**https://id.cerdi.edu.au/wmis/data/sosa/observationcollection/46217?f=json**]
+|===
 
 ==== Demo findings and potential next steps
+The Federation University Use Case was that information about a single real world feature (a Non-Information Resource, which in this case was a ‘Borehole’) was available online, in multiple formats and representations; and from multiple authoritative sources. SELFIE sought a mechanism whereby these various resources could be related to each other in a way that was discoverable and machine navigable e.g. search engines. The proposed SELFIE solution was JSON-LD landing-content that linked these various online resources together.
+SELFIE achieved all Federation University’s Use Case requirements, except in one crucial area. There was no satisfactory solution to encoding landing content for different data content. For example, different resources about a single borehole may contain data that is structured according to various domain models, i.e. different ‘profiles’, such as GeoSciML:Borehole, GroundWaterML2:Borehole or GroundWaterML2: GW_Well.
+Four options were considered as part of the experiment:
 
-Discuss issues that this demo works around or would otherwise need to be solved to take
-it from demonstration/experiment to production.
+.	Use schema.org:sameAs
+* The understanding of the IE was that sameAs, whether schema.org or the more rigorous owl:sameAs, asserts that the two resources are literally the same. That is, either resource could be used and the same outcome would result. This is clearly not the case in the Federation University example where the three domain models are providing significantly different data content about the same resource.
+.	Use schema.org:subjectOf
+* Other representations of the URI-14 (borehole), such as links to images, pdf reports, html pages etc. all comfortably fit under this property. However, FedUni felt that it did not adequately capture the fact that the domain model data was structured according to defined models and that the relationship between them was significant, and potentially navigable, compared to the other representations, which were more ‘here is a link, but we don’t know what you will find there’. Nor is there any one of the three profiles that could be considered a ‘primary’ representation for the URI-14 (borehole) and the other two subsidiary and under the ‘subjectOf’ property. Rather, all three are primary representations of the URI-14 (borehole).
+.	Use W3C profiles (e.g. https://w3c.github.io/dxwg/profiles/)
+* The Federation University Use Case could be met by using content negotiation by profile. However, this was considered outside of SELFIE scope. Even so, it is unclear how practical this solution is. It requires domain groups to establishing and maintain (govern) domain models (already a difficult and perhaps unsuccessful endeavor), and then establishing and maintaining profiles of these domain models that can be referenced by data providers. During the IE even the relatively simple case of generating a JSON-LD context of a simplified GeoSciML model ran afoul of the Domain Group who manage the XML encoded model. Establishing and maintaining JSON-LD contexts for the required profiles is well beyond the capacity and remit of FedUni.
+.	Use domain model properties
+* This was suggested as a mechanism to encode collections of observations about the URI-14. For example, the property sosa:isFeatureOfInterestOf could contain the link to sosa:ObservationCollection. For the FedUni Use Case, gwWellConstruction could contain gwml:Borehole, but it is unclear what the property is that would contain the top level domain features such as gwml:GW_Well and gsml:Borehole. Investigating this further was considered out of scope for the IE.
+
+What we have not done: There are some fairly major parts still missing from this Demo. 
+
+* We have not exposed the catalogue of resources (bores). There is no provision for a search engine to crawl and index all bores and their data resources.   
+* We are only in the preliminary stages of generating RDF or TTL format options. 
 
 === SELFIE Demonstration Write Up: Loc-I
 
